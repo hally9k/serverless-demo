@@ -1,0 +1,84 @@
+service: api
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 'arn:aws:dynamodb:us-east-1:533545012068:table/subscriptionsTable'
+
+plugins:
+  - serverless-jetpack
+
+package:
+  individually: true
+
+custom:
+  jetpack:
+    preInclude:
+      - '!**'
+
+    base: dist
+
+    roots:
+      - .
+      - ../../
+
+    concurrency: 8
+
+    trace:
+      dynamic:
+        resolutions:
+          'pkginfo/lib/pkginfo.js': ['../../package.json']
+
+functions:
+  connectionHandler:
+    handler: dist/handler.connectionHandler
+    events:
+      - websocket: $connect
+      - websocket: $disconnect
+    environment:
+      WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
+  subscriptionHandler:
+    handler: dist/handler.subscriptionHandler
+    events:
+      - websocket: subscribe
+      - websocket: unsubscribe
+    environment:
+      WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
+  cronHandler:
+    handler: dist/handler.cronHandler
+    timeout: 60
+    events:
+      - schedule: rate(1 minute)
+    environment:
+      WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
+  defaultHandler:
+    handler: dist/handler.defaultHandler
+    events:
+      - websocket: $default
+
+resources:
+  Resources:
+    subscriptionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: subscriptionsTable
+        AttributeDefinitions:
+          - AttributeName: subscriptionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: subscriptionId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

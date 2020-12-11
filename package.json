@@ -1,0 +1,16 @@
+{
+  "name": "serverless-demo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "scripts"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "4.1.2"
+  }
+}

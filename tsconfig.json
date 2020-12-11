@@ -1,0 +1,9 @@
+{
+  "references": [
+    { "path": "./packages/api" },
+    { "path": "./packages/counter" },
+  ],
+  "extends": "./tsconfig.base.json",
+  "include": [],
+  "files": [],
+}
