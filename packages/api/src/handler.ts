@@ -210,49 +210,49 @@ module.exports.subscriptionHandler = async (eventInput: APIGatewayEvent) => {
   }
 }
 
-module.exports.cronHandler = async () => {
-  for (let i = 0; i < 6; ++i) {
-    const startTime = Date.now()
+// module.exports.cronHandler = async () => {
+//   for (let i = 0; i < 60; ++i) {
+//     const startTime = Date.now()
 
-    const res = await ddb
-      .scan({
-        TableName: 'subscriptionsTable',
-      })
-      .promise()
+//     const res = await ddb
+//       .scan({
+//         TableName: 'subscriptionsTable',
+//       })
+//       .promise()
 
-    if (res.$response.error) {
-      console.log(res.$response.error)
+//     if (res.$response.error) {
+//       console.log(res.$response.error)
 
-      return {
-        statusCode: 200,
-      }
-    }
+//       return {
+//         statusCode: 200,
+//       }
+//     }
 
-    res.Items?.forEach((attrMap) => {
-      console.log(attrMap)
+//     res.Items?.forEach((attrMap) => {
+//       console.log(attrMap)
 
-      const params = {
-        ConnectionId: `${attrMap.subscriptionId.S}`,
-        Data: new Date().toISOString(),
-      }
+//       const params = {
+//         ConnectionId: `${attrMap.subscriptionId.S}`,
+//         Data: new Date().toISOString(),
+//       }
 
-      apigatewayManagementApi.postToConnection(params).promise()
-    })
+//       apigatewayManagementApi.postToConnection(params).promise()
+//     })
 
-    const endTime = Date.now()
+//     const endTime = Date.now()
 
-    const execTime = endTime - startTime
+//     const execTime = endTime - startTime
 
-    console.log(`execTime: `, execTime)
+//     console.log(`execTime: `, execTime)
 
-    await new Promise<void>((resolve) => {
-      setTimeout(() => {
-        resolve()
-      }, 10000 - execTime)
-    })
-  }
+//     await new Promise<void>((resolve) => {
+//       setTimeout(() => {
+//         resolve()
+//       }, 1000 - execTime)
+//     })
+//   }
 
-  return {
-    statusCode: 200,
-  }
-}
+//   return {
+//     statusCode: 200,
+//   }
+// }
