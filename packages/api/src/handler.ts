@@ -1,10 +1,11 @@
 'use strict'
 
 import { ApiGatewayManagementApi, DynamoDB } from 'aws-sdk'
-import { APIGatewayEvent } from 'aws-lambda'
+import { APIGatewayEvent, KinesisStreamEvent } from 'aws-lambda'
 import * as t from 'io-ts'
 import * as either from 'fp-ts/Either'
 import { PathReporter } from 'io-ts/lib/PathReporter'
+import base64 from 'base-64'
 
 const ddb = new DynamoDB({ apiVersion: '2012-08-10' })
 const apigatewayManagementApi = new ApiGatewayManagementApi({
@@ -210,49 +211,47 @@ module.exports.subscriptionHandler = async (eventInput: APIGatewayEvent) => {
   }
 }
 
-// module.exports.cronHandler = async () => {
-//   for (let i = 0; i < 60; ++i) {
-//     const startTime = Date.now()
+module.exports.streamHandler = async (eventInput: KinesisStreamEvent) => {
+  const data: string[] = eventInput.Records.map((record: any) =>
+    base64.decode(record.kinesis.data)
+  )
 
-//     const res = await ddb
-//       .scan({
-//         TableName: 'subscriptionsTable',
-//       })
-//       .promise()
+  console.log(JSON.stringify(data, null, 2))
 
-//     if (res.$response.error) {
-//       console.log(res.$response.error)
+  const res = await ddb
+    .scan({
+      TableName: 'subscriptionsTable',
+    })
+    .promise()
 
-//       return {
-//         statusCode: 200,
-//       }
-//     }
+  if (res.$response.error) {
+    console.log(res.$response.error)
 
-//     res.Items?.forEach((attrMap) => {
-//       console.log(attrMap)
+    return {
+      statusCode: 200,
+    }
+  }
 
-//       const params = {
-//         ConnectionId: `${attrMap.subscriptionId.S}`,
-//         Data: new Date().toISOString(),
-//       }
+  const promises = res.Items?.map(async (attrMap) => {
+    console.log(attrMap)
 
-//       apigatewayManagementApi.postToConnection(params).promise()
-//     })
+    const params = {
+      ConnectionId: `${attrMap.subscriptionId.S}`,
+      Data: `${data}`,
+    }
 
-//     const endTime = Date.now()
+    await apigatewayManagementApi.postToConnection(params).promise()
+  })
 
-//     const execTime = endTime - startTime
+  if (!promises) {
+    return {
+      statusCode: 500,
+    }
+  }
 
-//     console.log(`execTime: `, execTime)
+  await Promise.all(promises)
 
-//     await new Promise<void>((resolve) => {
-//       setTimeout(() => {
-//         resolve()
-//       }, 1000 - execTime)
-//     })
-//   }
-
-//   return {
-//     statusCode: 200,
-//   }
-// }
+  return {
+    statusCode: 200,
+  }
+}

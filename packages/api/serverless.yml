@@ -4,7 +4,7 @@ frameworkVersion: '2'
 provider:
   name: aws
   runtime: nodejs12.x
-  region: us-east-1
+  region: ap-southeast-2
   iamRoleStatements:
     - Effect: 'Allow'
       Action:
@@ -14,7 +14,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: 'arn:aws:dynamodb:us-east-1:533545012068:table/subscriptionsTable'
+      Resource: 'arn:aws:dynamodb:ap-southeast-2:362928302509:table/subscriptionsTable'
 
 plugins:
   - serverless-jetpack
@@ -55,11 +55,14 @@ functions:
       - websocket: unsubscribe
     environment:
       WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
-  cronHandler:
-    handler: dist/handler.cronHandler
+  streamHandler:
+    handler: dist/handler.streamHandler
     timeout: 60
     events:
-      - schedule: rate(1 minute)
+      - stream:
+          type: kinesis
+          arn: arn:aws:kinesis:ap-southeast-2:362928302509:stream/data-stream-demo
+          consumer: true
     environment:
       WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
   defaultHandler:
