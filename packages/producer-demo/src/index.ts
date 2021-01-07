@@ -16,15 +16,15 @@ const config = {
 
   // The Amazon Kinesis stream to ingest clickstream data into. If the specified
   // stream doesn't exist, the producer application creates a new stream.
-  stream: 'data-stream-demo',
+  stream: 'event-stream',
 
   // Total shards in the specified Amazon Kinesis stream.
-  shards: 2,
+  shards: 1,
 
   // The producer application batches clickstream records in to the size specified
   // here, and makes a single PutRecords API call to ingest all records to the
   // stream.
-  recordsToWritePerBatch: 5,
+  recordsToWritePerBatch: 1,
 
   // If the producer application creates a stream, it has to wait for the stream to
   // transition to ACTIVE state before it can start putting data in it. This

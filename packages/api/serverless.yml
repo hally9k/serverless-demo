@@ -15,6 +15,15 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource: 'arn:aws:dynamodb:ap-southeast-2:362928302509:table/subscriptionsTable'
+    - Effect: 'Allow'
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 'arn:aws:dynamodb:ap-southeast-2:362928302509:table/subscriptionsTable/index/subscription-index'
 
 plugins:
   - serverless-jetpack
@@ -42,31 +51,31 @@ custom:
 
 functions:
   connectionHandler:
-    handler: dist/handler.connectionHandler
+    handler: dist/handlers/connection.connectionHandler
     events:
       - websocket: $connect
       - websocket: $disconnect
     environment:
       WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
   subscriptionHandler:
-    handler: dist/handler.subscriptionHandler
+    handler: dist/handlers/subscription.subscriptionHandler
     events:
       - websocket: subscribe
       - websocket: unsubscribe
     environment:
       WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
   streamHandler:
-    handler: dist/handler.streamHandler
+    handler: dist/handlers/stream.streamHandler
     timeout: 60
     events:
       - stream:
           type: kinesis
-          arn: arn:aws:kinesis:ap-southeast-2:362928302509:stream/data-stream-demo
+          arn: arn:aws:kinesis:ap-southeast-2:362928302509:stream/event-stream
           consumer: true
     environment:
       WS_URL: ${cf:api-dev.ServiceEndpointWebsocket}
   defaultHandler:
-    handler: dist/handler.defaultHandler
+    handler: dist/handlers/default.defaultHandler
     events:
       - websocket: $default
 
@@ -77,11 +86,34 @@ resources:
       Properties:
         TableName: subscriptionsTable
         AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
           - AttributeName: subscriptionId
             AttributeType: S
         KeySchema:
-          - AttributeName: subscriptionId
+          - AttributeName: connectionId
             KeyType: HASH
+          - AttributeName: subscriptionId
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: subscription-index
+            KeySchema:
+              - AttributeName: subscriptionId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        TimeToLiveSpecification:
+          AttributeName: 'ttl'
+          Enabled: true
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    eventStream:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        Name: event-stream
+        RetentionPeriodHours: 24
+        ShardCount: 1
